@@ -1,6 +1,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+// import Quickshell.Services.Pipewire  // Temporarily disabled to avoid route device errors
+import qs.services
 import qs.Widgets
 import "."
 
@@ -11,7 +13,6 @@ PanelWindow {
     // Accept volume properties from parent
     property int volume: 0
     property bool volumeMuted: false
-    property var defaultAudioSink
     
     // Panel configuration - span full width
     anchors {
@@ -96,39 +97,26 @@ PanelWindow {
             id: trayMenu
         }
         
-        // System tray widget positioned to the left of volume
+        // System tray widget positioned to the left of time
         SystemTray {
             id: systemTrayWidget
             bar: panel  // Pass the panel window reference
             shell: panel  // Pass the panel as shell reference
             trayMenu: trayMenu  // Pass the tray menu reference
             anchors {
-                right: volumeWidget.left
+                right: timeDisplay.left
                 verticalCenter: parent.verticalCenter
                 rightMargin: 16
             }
         }
 
-        // Volume widget in the center-right area
-        Volume {
-            id: volumeWidget
-            anchors {
-                right: timeDisplay.left
-                verticalCenter: parent.verticalCenter
-                rightMargin: 24
-            }
-            shell: panel  // Pass the panel as shell reference
-            volume: panel.volume  // Pass volume from panel properties
-            volumeMuted: panel.volumeMuted  // Pass muted state
-        }
-        
-        // Time on the far right
+        // Time display
         Text {
             id: timeDisplay
             anchors {
-                right: parent.right
+                right: indicatorsModule.left
                 verticalCenter: parent.verticalCenter
-                rightMargin: 16
+                rightMargin: 24
             }
             
             property string currentTime: ""
@@ -145,14 +133,37 @@ PanelWindow {
                 repeat: true
                 onTriggered: {
                     var now = new Date()
-                    timeDisplay.currentTime = Qt.formatDate(now, "MMM dd") + " " + Qt.formatTime(now, "hh:mm:ss")
+                    timeDisplay.currentTime = Qt.formatDate(now, "MMM dd") + " " + Qt.formatTime(now, "hh:mm AP")
                 }
             }
             
             // Initialize time immediately
             Component.onCompleted: {
                 var now = new Date()
-                currentTime = Qt.formatDate(now, "MMM dd") + " " + Qt.formatTime(now, "hh:mm:ss")
+                currentTime = Qt.formatDate(now, "MMM dd") + " " + Qt.formatTime(now, "hh:mm AP")
+            }
+        }
+        
+        // Indicators module (audio, network, bluetooth status) on the far right
+        Loader {
+            id: indicatorsModule
+            anchors {
+                right: parent.right
+                verticalCenter: parent.verticalCenter
+                rightMargin: -9
+            
+            }
+            source: "IndicatorsModule.qml"
+            
+            // Pass shell properties to the indicators
+            property var shell: QtObject {
+                property int volume: panel.volume
+                property bool volumeMuted: panel.volumeMuted
+            }
+            
+            // Pass shell to the loaded component
+            onLoaded: {
+                indicatorsModule.item.shell = shell
             }
         }
     }

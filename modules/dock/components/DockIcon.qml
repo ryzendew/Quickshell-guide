@@ -33,6 +33,63 @@ Rectangle {
     border.color: isRunning ? "#00555555" : (isHovered ? "#555555" : "transparent")
     border.width: isRunning ? 1 : (isHovered ? 1 : 0)
     
+    // Animated background indicator for running apps
+    Rectangle {
+        visible: isRunning
+        anchors.fill: parent
+        radius: 30
+        color: "#00ffff"
+        opacity: 0.3
+        
+        // Animated glow for running apps
+        SequentialAnimation on opacity {
+            running: isRunning
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.1; duration: 1500 }
+            NumberAnimation { to: 0.5; duration: 1500 }
+        }
+    }
+    
+    // Outer cyan glow ring for running apps
+    Rectangle {
+        visible: isRunning
+        anchors.centerIn: parent
+        width: parent.width * 1.01
+        height: parent.height * 1.01
+        radius: parent.radius * 1.01
+        color: "transparent"
+        border.color: "#00ccff"
+        border.width: 1
+        opacity: 0.6
+        
+        // Animated outer glow
+        SequentialAnimation on opacity {
+            running: isRunning
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.2; duration: 2000 }
+            NumberAnimation { to: 0.8; duration: 2000 }
+        }
+    }
+    
+    // Additional bright cyan halo for running apps
+    Rectangle {
+        visible: isRunning
+        anchors.centerIn: parent
+        width: parent.width * 1.02
+        height: parent.height * 1.02
+        radius: parent.radius * 1.02
+        color: "#00e1ff"
+        opacity: 0.08
+        
+        // Animated halo
+        SequentialAnimation on opacity {
+            running: isRunning
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.02; duration: 2500 }
+            NumberAnimation { to: 0.15; duration: 2500 }
+        }
+    }
+    
     // Hover effect
     property bool isHovered: false
     
@@ -86,9 +143,9 @@ Rectangle {
         width: 4
         height: 4
         radius: 4
-        color: "#00ccff"
+        color: "#ff0000"
 
-        z: 5
+        z: 2
     }
     
     

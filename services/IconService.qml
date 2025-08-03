@@ -1,5 +1,6 @@
 pragma Singleton
 
+import QtQuick
 import Quickshell
 import Quickshell.Io
 
@@ -11,7 +12,7 @@ import Quickshell.Io
  * 3. Executable name matching
  * 4. Name-based fuzzy matching
  */
-Singleton {
+QtObject {
     id: root
     
     // Get all desktop entries for lookup (both system and user)

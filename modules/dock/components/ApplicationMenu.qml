@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import qs.services
+import "root:/services"
 
 PanelWindow {
     id: applicationMenu
@@ -12,14 +12,28 @@ PanelWindow {
     // Floating behavior - don't push other windows out of the way
     exclusiveZone: 0
     
-
+    // Set keyboard focus mode to allow input when visible
+    WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    
+    // Timer to delay focus activation
+    Timer {
+        id: focusGrabTimer
+        interval: 100
+        onTriggered: {
+            if (applicationMenu.visible) {
+                searchField.forceActiveFocus()
+            }
+        }
+    }
     
     // Ensure search field gets focus when menu becomes visible
     onVisibleChanged: {
         if (visible) {
-            // Clear search and focus immediately
+            // Clear search and focus with delay to prevent interference
             searchField.text = ""
-            searchField.forceActiveFocus()
+            focusGrabTimer.start()
+        } else {
+            focusGrabTimer.stop()
         }
     }
     

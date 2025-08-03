@@ -1,5 +1,6 @@
 pragma Singleton
 
+import QtQuick
 import Quickshell
 import Quickshell.Io
 
@@ -7,7 +8,7 @@ import Quickshell.Io
  * - Eases fuzzy searching for applications by name
  * - Guesses icon name for window class name
  */
-Singleton {
+QtObject {
     id: root
     property bool sloppySearch: false
     property real scoreThreshold: 0.2
