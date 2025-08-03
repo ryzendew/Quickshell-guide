@@ -1,158 +1,183 @@
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
+import Qt5Compat.GraphicalEffects
 import Quickshell.Services.SystemTray
+import Quickshell.Widgets
 
-// System tray widget that displays system tray icons
-Item {
-    id: systemTrayWidget
+Row {
+    property var bar
+    property var shell
+    property var trayMenu
+    spacing: 8
+    Layout.alignment: Qt.AlignVCenter
+    property bool containsMouse: false
+    property var systemTray: SystemTray
     
-    // Required property for the bar window reference
-    required property var bar
-    
-    // Dark theme colors matching the bar theme
-    readonly property color surfaceVariant: "#333333"
-    readonly property color accentPrimary: "#4a9eff"
-    readonly property color textPrimary: "#ffffff"
-    readonly property color backgroundPrimary: "#1a1a1a"
-    
-    readonly property int iconSize: 22
-    readonly property int iconSpacing: 8
-    readonly property int iconPadding: 4
-    
-    // Calculate width based on number of tray items
-    width: Math.max(0, trayRow.children.length * (iconSize + iconSpacing) - iconSpacing)
-    height: iconSize + iconPadding * 2
-    
-    // Row to hold all system tray icons
-    Row {
-        id: trayRow
-        anchors.centerIn: parent
-        spacing: iconSpacing
+    Repeater {
+        model: systemTray.items
         
-        Repeater {
-            model: SystemTray.items
+        delegate: Item {
+            width: 24
+            height: 24
             
-            // Individual system tray icon
-            MouseArea {
-                id: trayMouseArea
-                
-                property SystemTrayItem trayItem: modelData
-                
-                width: iconSize
-                height: iconSize
-                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                hoverEnabled: true
-                
-                onClicked: function(mouse) {
-                    if (mouse.button === Qt.LeftButton) {
-                        trayItem.activate()
-                    } else if (mouse.button === Qt.RightButton) {
-                        if (trayItem.hasMenu) {
-                            menuAnchor.open()
-                        }
-                    } else if (mouse.button === Qt.MiddleButton) {
-                        trayItem.secondaryActivate()
-                    }
+            // Hide Spotify icon, or adjust to your liking
+            visible: modelData && modelData.id !== "spotify"
+            
+            property bool isHovered: trayMouseArea.containsMouse
+            
+            // Hover scale animation
+            scale: isHovered ? 1.15 : 1.0
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 150
+                    easing.type: Easing.OutCubic
                 }
-                
-                onWheel: function(wheel) {
-                    trayItem.scroll(wheel.angleDelta.x, wheel.angleDelta.y)
+            }
+            
+            // Subtle rotation on hover
+            rotation: isHovered ? 5 : 0
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 200
+                    easing.type: Easing.OutCubic
                 }
+            }
+            
+            Rectangle {
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                radius: 6
+                color: "transparent"
+                clip: true
                 
-                // Context menu anchor
-                QsMenuAnchor {
-                    id: menuAnchor
-                    
-                    menu: trayItem.menu
-                    anchor.window: systemTrayWidget.bar
-                    anchor.rect.x: trayMouseArea.x + systemTrayWidget.x
-                    anchor.rect.y: trayMouseArea.y + systemTrayWidget.y
-                    anchor.rect.width: trayMouseArea.width
-                    anchor.rect.height: trayMouseArea.height
-                    anchor.edges: Edges.Bottom
-                }
-                
-                // Background rectangle with hover effect
-                Rectangle {
-                    id: backgroundRect
-                    anchors.fill: parent
-                    color: trayMouseArea.containsMouse ? surfaceVariant : "transparent"
-                    radius: 4
-                    
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: 200
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                }
-                
-                // Icon image
-                Image {
-                    id: iconImage
+                IconImage {
+                    id: trayIcon
                     anchors.centerIn: parent
-                    width: iconSize - 4
-                    height: iconSize - 4
-                    source: trayItem.icon
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    
-                    // Fallback text if icon fails to load
-                    Text {
-                        anchors.centerIn: parent
-                        text: trayItem.title ? trayItem.title.charAt(0).toUpperCase() : "?"
-                        color: textPrimary
-                        font.pixelSize: 12
-                        font.bold: true
-                        visible: parent.status === Image.Error || parent.status === Image.Null
-                    }
-                }
-                
-                // Tooltip
-                Rectangle {
-                    id: tooltip
-                    visible: trayMouseArea.containsMouse && trayItem.title && trayItem.title.length > 0
-                    color: backgroundPrimary
-                    border.color: surfaceVariant
-                    border.width: 1
-                    radius: 6
-                    width: tooltipText.width + 16
-                    height: tooltipText.height + 12
-                    
-                    // Position tooltip above the icon
-                    anchors.bottom: parent.top
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottomMargin: 8
-                    
-                    Text {
-                        id: tooltipText
-                        anchors.centerIn: parent
-                        text: trayItem.title || ""
-                        color: textPrimary
-                        font.pixelSize: 11
+                    width: 16
+                    height: 16
+                    smooth: false
+                    asynchronous: true
+                    backer.fillMode: Image.PreserveAspectFit
+                    source: {
+                        let icon = modelData?.icon || ""
+                        if (!icon) return ""
+                        
+                        // Process icon path
+                        if (icon.includes("?path=")) {
+                            const [name, path] = icon.split("?path=")
+                            const fileName = name.substring(name.lastIndexOf("/") + 1)
+                            return `file://${path}/${fileName}`
+                        }
+                        return icon
                     }
                     
-                    // Fade in/out animation
-                    opacity: trayMouseArea.containsMouse ? 1.0 : 0.0
+                    opacity: status === Image.Ready ? 1 : 0
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 200
+                            duration: 300
                             easing.type: Easing.OutCubic
                         }
+                    }
+                    
+                    Component.onCompleted: {
                     }
                 }
             }
+            
+            MouseArea {
+                id: trayMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                
+                onClicked: (mouse) => {
+                    if (!modelData) return
+                    
+                    if (mouse.button === Qt.LeftButton) {
+                        // Close any open menu first
+                        if (trayMenu && trayMenu.visible) {
+                            trayMenu.hideMenu()
+                        }
+                        
+                        if (!modelData.onlyMenu) {
+                            modelData.activate()
+                        }
+                    } else if (mouse.button === Qt.MiddleButton) {
+                        // Close any open menu first
+                        if (trayMenu && trayMenu.visible) {
+                            trayMenu.hideMenu()
+                        }
+                        
+                        modelData.secondaryActivate && modelData.secondaryActivate()
+                    } else if (mouse.button === Qt.RightButton) {
+                        trayTooltip.tooltipVisible = false
+                        console.log("Right click on", modelData.id, "hasMenu:", modelData.hasMenu, "menu:", modelData.menu)
+                        
+                        // If menu is already visible, close it
+                        if (trayMenu && trayMenu.visible) {
+                            trayMenu.hideMenu()
+                            return
+                        }
+                        
+                        if (modelData.hasMenu && modelData.menu && trayMenu) {
+                            // Anchor the menu to the tray icon item (parent) and position it below the icon
+                            const menuX = (width / 2) - (trayMenu.width / 2)
+                            const menuY = height + 20
+                            trayMenu.menu = modelData.menu
+                            trayMenu.showAt(parent, menuX, menuY)
+                        } else {
+                            // console.log("No menu available for", modelData.id, "or trayMenu not set")
+                        }
+                    }
+                }
+                
+                onEntered: trayTooltip.tooltipVisible = true
+                onExited: trayTooltip.tooltipVisible = false
+            }
+            
+            // Simple tooltip
+            Rectangle {
+                id: trayTooltip
+                visible: tooltipVisible
+                color: "#1a1a1a"
+                border.color: "#333333"
+                border.width: 1
+                radius: 4
+                width: tooltipText.width + 12
+                height: tooltipText.height + 8
+                
+                property bool tooltipVisible: false
+                
+                // Position tooltip above the icon
+                anchors.bottom: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottomMargin: 8
+                
+                Text {
+                    id: tooltipText
+                    anchors.centerIn: parent
+                    text: modelData.tooltipTitle || modelData.name || modelData.id || "Tray Item"
+                    color: "#ffffff"
+                    font.pixelSize: 11
+                }
+                
+                // Fade in/out animation
+                opacity: tooltipVisible ? 1.0 : 0.0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+                }
+            }
+            
+            Component.onDestruction: {
+                // No cache cleanup needed
+            }
         }
-    }
-    
-    // Show a placeholder when no system tray items are available
-    Text {
-        anchors.centerIn: parent
-        visible: SystemTray.items.length === 0
-        text: "No tray items"
-        color: surfaceVariant
-        font.pixelSize: 10
-        font.family: "Inter, sans-serif"
-        opacity: 0.7
     }
 } 
