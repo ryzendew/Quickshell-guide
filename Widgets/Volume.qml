@@ -1,11 +1,34 @@
 import QtQuick
 import Quickshell
+import qs.services
 
 Item {
     id: volumeDisplay
     property var shell
     property int volume: 0
     property bool volumeMuted: false
+    
+    // Update volume display when properties change
+    onVolumeChanged: {
+        console.log("Volume widget - Volume changed to:", volume)
+        if (!showPercentage) {
+            showPercentage = true
+            showHideAnimation.start()
+        } else {
+            showHideAnimation.restart()
+        }
+    }
+    
+    onVolumeMutedChanged: {
+        console.log("Volume widget - Mute state changed to:", volumeMuted)
+        // Force update when mute state changes
+        if (!showPercentage) {
+            showPercentage = true
+            showHideAnimation.start()
+        } else {
+            showHideAnimation.restart()
+        }
+    }
 
     readonly property int iconSize: 22
     readonly property int pillHeight: 22
@@ -26,15 +49,7 @@ Item {
     width: Math.max(iconSize, showPercentage ? iconSize + maxPillWidth - pillOverlap : iconSize)
     height: pillHeight
 
-    // Watch for volume changes
-    onVolumeChanged: {
-        if (!showPercentage) {
-            showPercentage = true
-            showHideAnimation.start()
-        } else {
-            showHideAnimation.restart()
-        }
-    }
+
 
     Component.onCompleted: {
         maxPillWidth = percentageText.implicitWidth + pillPaddingHorizontal * 2 + pillOverlap
@@ -99,11 +114,11 @@ Item {
 
             text: {
                 if (volumeMuted || volume === 0)
-                    return "🔇"  // Muted icon
+                    return "volume_off"  // Muted icon
                 else if (volume > 0 && volume < 30)
-                    return "🔉"  // Low volume icon
+                    return "volume_down"  // Low volume icon
                 else
-                    return "🔊"  // High volume icon
+                    return "volume_up"  // High volume icon
             }
         }
 
@@ -114,9 +129,9 @@ Item {
             
             onClicked: function(mouse) {
                 if (mouse.button === Qt.LeftButton) {
-                    // Left click: toggle mute
-                    if (shell && shell.defaultAudioSink && shell.defaultAudioSink.audio) {
-                        shell.defaultAudioSink.audio.muted = !shell.defaultAudioSink.audio.muted
+                    // Left click: toggle mute using custom PipeWire service
+                    if (Pipewire.sinkId) {
+                        Pipewire.setSinkMuted(!Pipewire.sinkMuted)
                     }
                 } else if (mouse.button === Qt.RightButton) {
                     // Right click: open system volume control
@@ -125,11 +140,16 @@ Item {
             }
             
             onWheel: function(wheel) {
-                // Scroll wheel: adjust volume
-                if (shell && shell.defaultAudioSink && shell.defaultAudioSink.audio) {
-                    var delta = wheel.angleDelta.y > 0 ? 0.05 : -0.05  // 5% steps
-                    var newVolume = Math.max(0, Math.min(1, shell.defaultAudioSink.audio.volume + delta))
-                    shell.defaultAudioSink.audio.volume = newVolume
+                // Scroll wheel: adjust volume using custom PipeWire service
+                if (Pipewire.sinkId) {
+                    var delta = wheel.angleDelta.y > 0 ? 0.01 : -0.01  // 1% steps
+                    // Use a local variable to track volume since Pipewire.sinkVolume might not update
+                    if (!volumeDisplay.currentVolume) {
+                        volumeDisplay.currentVolume = Pipewire.sinkVolume || 0
+                    }
+                    volumeDisplay.currentVolume = Math.max(0, Math.min(1, volumeDisplay.currentVolume + delta))
+                    Pipewire.setSinkVolume(volumeDisplay.currentVolume)
+                    console.log("Volume widget - Set volume to:", volumeDisplay.currentVolume)
                 }
             }
         }
