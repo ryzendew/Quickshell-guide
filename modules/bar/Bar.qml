@@ -1,7 +1,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
-import "../Widgets/"
+import qs.Widgets
+import "."
 
 // Create a proper panel window
 PanelWindow {
@@ -33,59 +34,74 @@ PanelWindow {
         color: "#1a1a1a"  // Dark background
         radius: 0  // Full width bar without rounded corners
         border.color: "#333333"
-        border.width: 1
+        border.width: 0
+        
+        // Bottom border only
+        Rectangle {
+            anchors {
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+            }
+            height: 1
+            color: "#5000eeff"
+        }
 
-        // Workspaces on the far left - connected to Hyprland
-        Row {
-            id: workspacesRow
+        // Arch Linux button in the top left
+        Rectangle {
+            id: archButton
             anchors {
                 left: parent.left
                 verticalCenter: parent.verticalCenter
-                leftMargin: 16
+                leftMargin: 4
             }
-            spacing: 8
+            width: 32
+            height: 32
+            radius: 6
+            color: archMouseArea.containsMouse ? "#333333" : "transparent"
+            border.color: "#00555555"
+            border.width: 1
             
-            // Real Hyprland workspace data
-            Repeater {
-                model: Hyprland.workspaces
-                
-                Rectangle {
-                    width: 32
-                    height: 24
-                    radius: 20
-                    color: modelData.active ? "#4a9eff" : "#333333"
-                    border.color: "#555555"
-                    border.width: 1
-                    
-                    // Make workspaces clickable
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: Hyprland.dispatch("workspace " + modelData.id)
-                    }
-                    
-                    Text {
-                        text: modelData.id
-                        anchors.centerIn: parent
-                        color: modelData.active ? "#ffffff" : "#cccccc"
-                        font.pixelSize: 12
-                        font.family: "Inter, sans-serif"
-                    }
+            // Arch Linux icon (white version)
+            Image {
+                anchors.centerIn: parent
+                width: 20
+                height: 20
+                source: Qt.resolvedUrl("../../assets/icons/arch-white-symbolic.svg")
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+            }
+            
+            // Mouse area for interactions
+            MouseArea {
+                id: archMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    // TODO: Add functionality for the Arch button
                 }
-            }
-            
-            // Fallback if no workspaces are detected
-            Text {
-                visible: Hyprland.workspaces.length === 0
-                text: "No workspaces"
-                color: "#ffffff"
-                font.pixelSize: 12
             }
         }
 
+        // Workspaces in the center
+        Loader {
+            anchors {
+                centerIn: parent
+            }
+            source: "Workspaces.qml"
+        }
+
+        // Custom tray menu for system tray
+        CustomTrayMenu {
+            id: trayMenu
+        }
+        
         // System tray widget positioned to the left of volume
         SystemTray {
             id: systemTrayWidget
             bar: panel  // Pass the panel window reference
+            shell: panel  // Pass the panel as shell reference
+            trayMenu: trayMenu  // Pass the tray menu reference
             anchors {
                 right: volumeWidget.left
                 verticalCenter: parent.verticalCenter

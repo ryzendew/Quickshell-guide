@@ -1,0 +1,2 @@
+singleton AppSearch 1.0 AppSearch.qml
+singleton IconService 1.0 IconService.qml 
